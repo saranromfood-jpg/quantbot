@@ -1,0 +1,56 @@
+# ====== QuantBot Configuration ======
+
+exchange:
+  id: binance            # ccxt exchange id (binance, bybit, okx, ...)
+  api_key: "YOUR_API_KEY"
+  api_secret: "YOUR_API_SECRET"
+  testnet: true          # true = Binance testnet (เงินปลอม) | false = เงินจริง
+                         # *** แนะนำอย่างยิ่ง: รัน testnet อย่างน้อย 2-4 สัปดาห์ก่อนเปิด live ***
+
+trading:
+  mode: paper            # paper | live
+  symbols: ["BTC/USDT", "ETH/USDT", "SOL/USDT"]
+  timeframe: "15m"       # แท่งเทียนหลักที่ใช้วิเคราะห์
+  poll_seconds: 30       # ความถี่ตรวจสัญญาณ
+  initial_capital: 10000 # USDT (ใช้ใน paper mode / backtest)
+
+risk:
+  risk_per_trade: 0.01        # เสี่ยง 1% ของพอร์ตต่อไม้ (ระดับ hedge fund ใช้ 0.5-2%)
+  max_position_pct: 0.20      # ห้ามถือเหรียญเดียวเกิน 20% ของพอร์ต
+  max_open_positions: 3
+  atr_stop_multiplier: 2.0    # stop loss = 2 x ATR
+  atr_target_multiplier: 3.0  # take profit = 3 x ATR (RR 1:1.5)
+  trailing_stop: true
+  max_daily_loss_pct: 0.03    # ขาดทุนวันละเกิน 3% -> หยุดเทรดทั้งวัน
+  max_drawdown_pct: 0.10      # drawdown เกิน 10% -> kill switch ปิดทุกโพซิชัน หยุดบอท
+
+strategies:
+  trend_momentum:
+    enabled: true
+    weight: 0.45
+    ema_fast: 21
+    ema_slow: 55
+    rsi_period: 14
+    adx_threshold: 20       # เทรดเฉพาะตอนมีเทรนด์จริง
+  mean_reversion:
+    enabled: true
+    weight: 0.30
+    bb_period: 20
+    bb_std: 2.0
+    zscore_entry: 2.0
+    adx_max: 25             # เล่นเฉพาะตลาด sideways
+  ml_factor:
+    enabled: true
+    weight: 0.25
+    lookback_bars: 1500     # ข้อมูลที่ใช้เทรนโมเดล
+    retrain_every_bars: 96  # เทรนใหม่ทุก 24 ชม. (96 แท่ง 15m)
+    min_confidence: 0.58    # ความมั่นใจขั้นต่ำก่อนให้สัญญาณ
+
+ensemble:
+  long_threshold: 0.35      # คะแนนรวม > 0.35 -> long
+  short_threshold: -0.35    # คะแนนรวม < -0.35 -> short (futures เท่านั้น)
+  allow_short: false        # spot ตั้ง false
+
+dashboard:
+  host: "127.0.0.1"
+  port: 8050

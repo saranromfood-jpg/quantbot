@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: quantbot
+    runtime: python
+    region: singapore        # หลีกเลี่ยง US (Binance บล็อก IP สหรัฐ)
+    plan: starter            # free plan จะ sleep เมื่อไม่มีคนเปิด dashboard -> บอทหยุด
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py
+    envVars:
+      - key: API_KEY
+        sync: false
+      - key: API_SECRET
+        sync: false
+      - key: TESTNET
+        value: "true"
+      - key: TRADING_MODE
+        value: "paper"
