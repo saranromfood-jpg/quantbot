@@ -1,18 +1,19 @@
 # ====== QuantBot Configuration ======
 
 exchange:
-  id: binance            # ccxt exchange id (binance, bybit, okx, ...)
+  id: bitkub             # bitkub (เจ้าไทย คู่ THB) | หรือ ccxt id อื่น เช่น binance, bybit
   api_key: "YOUR_API_KEY"
   api_secret: "YOUR_API_SECRET"
-  testnet: true          # true = Binance testnet (เงินปลอม) | false = เงินจริง
-                         # *** แนะนำอย่างยิ่ง: รัน testnet อย่างน้อย 2-4 สัปดาห์ก่อนเปิด live ***
+  testnet: false         # Bitkub ไม่มี testnet — ใช้ trading.mode=paper เพื่อทดสอบด้วยเงินจำลอง
 
 trading:
   mode: paper            # paper | live
-  symbols: ["BTC/USDT", "ETH/USDT", "SOL/USDT"]
+  quote: "THB"           # สกุลเงินฐาน (Bitkub = THB)
+  symbols: ["BTC/THB", "ETH/THB", "USDT/THB"]
   timeframe: "15m"       # แท่งเทียนหลักที่ใช้วิเคราะห์
   poll_seconds: 30       # ความถี่ตรวจสัญญาณ
-  initial_capital: 10000 # USDT (ใช้ใน paper mode / backtest)
+  min_notional: 15       # ออเดอร์ขั้นต่ำ (THB) — Bitkub ~10 THB
+  initial_capital: 100000 # THB (ใช้ใน paper mode / backtest)
 
 risk:
   risk_per_trade: 0.01        # เสี่ยง 1% ของพอร์ตต่อไม้ (ระดับ hedge fund ใช้ 0.5-2%)
@@ -54,3 +55,40 @@ ensemble:
 dashboard:
   host: "127.0.0.1"
   port: 8050
+
+# ====== v2 additions ======
+market:
+  type: spot              # Bitkub = spot เท่านั้น (ไม่มี futures/short/funding)
+
+regime:                   # ด้าน 1: regime-aware ensemble (ADX thresholds — ปรับจาก walk-forward)
+  adx_trend: 28           # >= นี้ = ตลาดมีเทรนด์
+  adx_range: 18           # <  นี้ = ตลาด sideways
+  weights_trending: {trend: 0.55, meanrev: 0.05, ml: 0.40}
+  weights_ranging:  {trend: 0.15, meanrev: 0.55, ml: 0.30}
+  weights_transition: {trend: 0.40, meanrev: 0.30, ml: 0.30}
+  confidence_scaling: true   # ปรับขนาดไม้ตามความแรงสัญญาณ
+
+execution_v2:             # ด้าน 3
+  base_slippage_bps: 5.0
+  slippage_vol_coef: 0.15
+  slippage_cap_bps: 50.0
+  fee_rate: 0.0025         # Bitkub maker/taker 0.25% (สูงกว่า Binance — กระทบ fee drag มาก)
+  funding_rate_per_8h: 0.0001   # ใช้เมื่อ market.type=futures (จำลอง; live ดึงจริงจาก exchange)
+  time_gate_utc: [2, 5]         # ห้ามเปิดไม้ใหม่ช่วง 02:00-05:00 UTC (low liquidity)
+
+breakers_v2:              # ด้าน 3.4
+  consecutive_losses: 5         # แพ้ติดกัน N ไม้ -> พัก
+  consecutive_pause_hours: 4
+  vol_spike_multiple: 3.0       # ATR > N x ค่าเฉลี่ย 24h -> หยุดชั่วคราว
+
+ml_v2:                    # ด้าน 2
+  train_window: 4000
+  retrain_every_bars: 96
+  conf_threshold: 0.62
+  calibrate: true
+
+backtest:
+  universe: ["BTC/THB", "ETH/THB", "USDT/THB", "ADA/THB", "XRP/THB"]
+  train_months: 6
+  test_months: 1
+  oos_holdout_pct: 0.25   # กันข้อมูล 25% ท้ายไว้ ห้ามแตะจน finalize

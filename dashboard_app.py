@@ -27,7 +27,7 @@ PAGE = """<!doctype html><html lang="th"><head><meta charset="utf-8">
 </style></head><body>
 <h1>🤖 QuantBot <span id="status" class="badge b-run">-</span> <span class="label" id="updated"></span></h1>
 <div class="grid">
- <div class="card"><div class="label">Equity (USDT)</div><div class="val" id="equity">-</div></div>
+ <div class="card"><div class="label">Equity (THB)</div><div class="val" id="equity">-</div></div>
  <div class="card"><div class="label">PnL รวม</div><div class="val" id="pnl">-</div></div>
  <div class="card"><div class="label">Cash</div><div class="val" id="cash">-</div></div>
  <div class="card"><div class="label">จำนวนเทรด</div><div class="val" id="ntrades">-</div></div>

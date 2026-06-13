@@ -71,4 +71,5 @@ def enrich(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     out["ret_16"] = out["close"].pct_change(16)
     out["vol_16"] = out["ret_1"].rolling(16).std()
     out["vol_ratio"] = out["volume"] / out["volume"].rolling(20).mean()
+    out["atr_avg_24h"] = out["atr"].rolling(96, min_periods=20).mean()
     return out

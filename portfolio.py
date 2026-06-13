@@ -28,7 +28,7 @@ class Portfolio:
     def open(self, symbol, side, qty, price, stop, target, ts, fee_rate=0.001):
         cost = qty * price
         fee = cost * fee_rate
-        self.cash -= (cost + fee) if side == "long" else fee - 0  # short: margin simplified
+        self.cash -= (cost + fee) if side == "long" else fee
         if side == "short":
             self.cash -= cost  # reserve margin 1x
         self.positions[symbol] = {"side": side, "qty": qty, "entry": price, "stop": stop,
@@ -51,6 +51,15 @@ class Portfolio:
                  "opened_at": p["opened_at"], "closed_at": str(ts), "reason": reason}
         self.trades.append(trade)
         return trade
+
+    def apply_funding(self, prices: dict, funding_rate: float):
+        """v2 ด้าน 3.2: futures มี funding ทุก 8 ชม. หักจากเงินสดของโพซิชันที่ถือข้ามรอบ.
+        long จ่ายเมื่อ funding บวก, short ได้รับ (และกลับกัน)."""
+        for sym, p in self.positions.items():
+            px = prices.get(sym, p["entry"])
+            notional = p["qty"] * px
+            cost = notional * funding_rate
+            self.cash -= cost if p["side"] == "long" else -cost
 
     def record_equity(self, ts, prices):
         self.equity_curve.append([str(ts), round(self.equity(prices), 2)])

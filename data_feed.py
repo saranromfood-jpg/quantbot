@@ -1,23 +1,37 @@
-"""Real-time & historical market data via ccxt."""
+"""Real-time & historical market data. ccxt for most exchanges; Bitkub via custom adapter."""
 import time
-import ccxt
 import pandas as pd
+
+
+def _make_exchange(cfg: dict):
+    ex_cfg = cfg["exchange"]
+    ex_id = ex_cfg["id"].lower()
+    key = ex_cfg.get("api_key", "")
+    secret = ex_cfg.get("api_secret", "")
+    has_key = key and "YOUR_" not in key
+    if ex_id == "bitkub":
+        from bitkub_client import BitkubClient
+        return BitkubClient(key if has_key else "", secret if has_key else "")
+    import ccxt
+    klass = getattr(ccxt, ex_id)
+    params = {"enableRateLimit": True}
+    if has_key:
+        params.update({"apiKey": key, "secret": secret})
+    ex = klass(params)
+    if ex_cfg.get("testnet"):
+        try:
+            ex.set_sandbox_mode(True)
+        except Exception:
+            pass
+    return ex
 
 
 class DataFeed:
     def __init__(self, cfg: dict):
-        ex_cfg = cfg["exchange"]
-        klass = getattr(ccxt, ex_cfg["id"])
-        params = {"enableRateLimit": True}
-        if ex_cfg.get("api_key") and "YOUR_" not in ex_cfg["api_key"]:
-            params.update({"apiKey": ex_cfg["api_key"], "secret": ex_cfg["api_secret"]})
-        self.exchange = klass(params)
-        if ex_cfg.get("testnet"):
-            try:
-                self.exchange.set_sandbox_mode(True)
-            except Exception:
-                pass
+        self.cfg = cfg
+        self.exchange = _make_exchange(cfg)
         self.timeframe = cfg["trading"]["timeframe"]
+        self.quote = cfg["trading"].get("quote", "USDT")
 
     def ohlcv(self, symbol: str, limit: int = 300, since=None) -> pd.DataFrame:
         rows = self.exchange.fetch_ohlcv(symbol, self.timeframe, since=since, limit=limit)
@@ -31,8 +45,7 @@ class DataFeed:
         since = self.exchange.milliseconds() - total_bars * tf_ms
         frames, fetched = [], 0
         while fetched < total_bars:
-            batch = self.exchange.fetch_ohlcv(self.exchange.symbol(symbol) if hasattr(self.exchange, "symbol") else symbol,
-                                              self.timeframe, since=since, limit=1000)
+            batch = self.exchange.fetch_ohlcv(symbol, self.timeframe, since=since, limit=1000)
             if not batch:
                 break
             frames.extend(batch)
@@ -48,6 +61,6 @@ class DataFeed:
     def ticker(self, symbol: str) -> float:
         return float(self.exchange.fetch_ticker(symbol)["last"])
 
-    def balance_usdt(self) -> float:
+    def balance_quote(self) -> float:
         bal = self.exchange.fetch_balance()
-        return float(bal.get("USDT", {}).get("free", 0))
+        return float(bal.get(self.quote, {}).get("free", 0))
