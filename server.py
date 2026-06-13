@@ -23,9 +23,13 @@ def load_cfg():
 
 
 def run_bot(cfg):
-    from engine import Engine
     try:
-        Engine(cfg).run()
+        if cfg.get("portfolio", {}).get("enabled"):
+            from portfolio_engine import PortfolioEngine
+            PortfolioEngine(cfg).run()
+        else:
+            from engine import Engine
+            Engine(cfg).run()
     except Exception:
         log.exception("bot crashed")
 

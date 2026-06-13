@@ -1,4 +1,4 @@
-"""Real-time dashboard. Run: python dashboard/app.py  ->  http://127.0.0.1:8050"""
+"""Real-time dashboard. Run: python dashboard_app.py  ->  http://127.0.0.1:8050"""
 import json
 import os
 
@@ -34,7 +34,8 @@ PAGE = """<!doctype html><html lang="th"><head><meta charset="utf-8">
  <div class="card"><div class="label">Win rate</div><div class="val" id="winrate">-</div></div>
 </div>
 <div class="section"><div class="label" style="margin-bottom:8px">Equity Curve</div><div id="chartwrap"><canvas id="chart"></canvas></div></div>
-<div class="section"><div class="label" style="margin-bottom:8px">สัญญาณล่าสุด</div><table id="signals"><thead><tr><th>เหรียญ</th><th>ราคา</th><th>Action</th><th>Score</th><th>Trend</th><th>MeanRev</th><th>ML</th></tr></thead><tbody></tbody></table></div>
+<div class="section"><div class="label" style="margin-bottom:8px">สถานะตลาด (Market Filter)</div><div id="market" style="font-size:15px">-</div></div>
+<div class="section"><div class="label" style="margin-bottom:8px">สัญญาณรายเหรียญ</div><table id="signals"><thead><tr><th>เหรียญ</th><th>ราคา</th><th>เหนือ EMA200?</th><th>ถืออยู่?</th></tr></thead><tbody></tbody></table></div>
 <div class="section"><div class="label" style="margin-bottom:8px">โพซิชันที่เปิดอยู่</div><table id="positions"><thead><tr><th>เหรียญ</th><th>ฝั่ง</th><th>จำนวน</th><th>เข้า</th><th>ราคาปัจจุบัน</th><th>Stop</th><th>Target</th></tr></thead><tbody></tbody></table></div>
 <div class="section"><div class="label" style="margin-bottom:8px">ประวัติเทรดล่าสุด</div><table id="trades"><thead><tr><th>เหรียญ</th><th>ฝั่ง</th><th>เข้า</th><th>ออก</th><th>PnL</th><th>เหตุผล</th><th>เวลาปิด</th></tr></thead><tbody></tbody></table></div>
 <script>
@@ -53,26 +54,28 @@ async function refresh(){
  document.getElementById('updated').textContent = 'อัปเดต: '+(s.updated_at||'').slice(0,19);
  const st = document.getElementById('status');
  st.textContent = s.status; st.className = 'badge '+(s.status==='running'?'b-run':'b-kill');
- // signals
+ const mk = (s.signals||{})._market;
+ const mkdiv = document.getElementById('market');
+ if(mk){ mkdiv.innerHTML = mk.on
+     ? `<span class="green">🟢 ตลาดกระทิง (BTC ${fmt(mk.btc)} > EMA200 ${fmt(mk.ema200)}) — เปิดเทรด</span>`
+     : `<span class="amber">🟡 ตลาดหมี (BTC ${fmt(mk.btc)} < EMA200 ${fmt(mk.ema200)}) — หนีเข้าเงินสด</span>`; }
  let tb = document.querySelector('#signals tbody'); tb.innerHTML='';
  for(const [sym,v] of Object.entries(s.signals||{})){
-   const c = v.action==='long'?'green':(v.action==='short'?'red':'amber');
-   tb.innerHTML += `<tr><td>${sym}</td><td>${fmt(v.price)}</td><td class="${c}">${v.action}</td><td>${v.score}</td>
-     <td>${v.parts?.TrendMomentum??'-'}</td><td>${v.parts?.MeanReversion??'-'}</td><td>${v.parts?.MLFactor??'-'}</td></tr>`;
+   if(sym==='_market') continue;
+   tb.innerHTML += `<tr><td>${sym}</td><td>${fmt(v.price)}</td>
+     <td class="${v.above_ema200?'green':'red'}">${v.above_ema200?'ใช่':'ไม่'}</td>
+     <td>${v.held?'✅':'-'}</td></tr>`;
  }
- // positions
  tb = document.querySelector('#positions tbody'); tb.innerHTML='';
  for(const p of (s.positions||[])){
    tb.innerHTML += `<tr><td>${p.symbol}</td><td class="${p.side==='long'?'green':'red'}">${p.side}</td>
      <td>${p.qty.toFixed(6)}</td><td>${fmt(p.entry)}</td><td>${fmt(p.mark)}</td><td>${fmt(p.stop)}</td><td>${fmt(p.target)}</td></tr>`;
  }
- // trades
  tb = document.querySelector('#trades tbody'); tb.innerHTML='';
  for(const t of (s.trades||[]).slice().reverse()){
    tb.innerHTML += `<tr><td>${t.symbol}</td><td>${t.side}</td><td>${fmt(t.entry)}</td><td>${fmt(t.exit)}</td>
      <td class="${t.pnl>=0?'green':'red'}">${(t.pnl>=0?'+':'')+fmt(t.pnl)}</td><td>${t.reason}</td><td>${t.closed_at.slice(0,19)}</td></tr>`;
  }
- // chart
  const labels = (s.equity_curve||[]).map(x=>x[0].slice(5,16));
  const vals = (s.equity_curve||[]).map(x=>x[1]);
  if(!chart){
