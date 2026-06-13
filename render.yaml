@@ -15,3 +15,5 @@ services:
         value: "true"
       - key: TRADING_MODE
         value: "paper"
+      - key: BITKUB_PROXY
+        sync: false        # ตั้งเป็น Thai HTTPS proxy เมื่อจะเปิด live (ปล่อยว่างได้ตอน paper)

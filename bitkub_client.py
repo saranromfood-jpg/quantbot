@@ -11,10 +11,20 @@ import hashlib
 import hmac
 import json as _json
 import time
+import os
 import urllib.parse
 import urllib.request
 
 BASE = "https://api.bitkub.com"
+
+# Route ALL Bitkub calls through a Thai HTTPS proxy when set (เพื่อให้รันบน Render/ต่างประเทศได้).
+# ตั้ง env BITKUB_PROXY = "http://user:pass@host:port" หรือ "http://host:port"
+_PROXY = os.environ.get("BITKUB_PROXY", "").strip()
+if _PROXY:
+    _OPENER = urllib.request.build_opener(
+        urllib.request.ProxyHandler({"http": _PROXY, "https": _PROXY}))
+else:
+    _OPENER = urllib.request.build_opener()  # direct
 
 # timeframe -> Bitkub TradingView resolution (นาที, หรือ 'D')
 _TF_RES = {"1m": "1", "5m": "5", "15m": "15", "30m": "30",
@@ -39,7 +49,7 @@ def _http_get(path: str, params: dict = None, timeout=15):
     if params:
         url += "?" + urllib.parse.urlencode(params)
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with _OPENER.open(req, timeout=timeout) as r:
         return _json.loads(r.read())
 
 
@@ -103,7 +113,7 @@ class BitkubClient:
             BASE + path, data=body.encode(), method="POST",
             headers={"Accept": "application/json", "Content-Type": "application/json",
                      "X-BTK-APIKEY": self.api_key, "X-BTK-TIMESTAMP": ts, "X-BTK-SIGN": sign})
-        with urllib.request.urlopen(req, timeout=15) as r:
+        with _OPENER.open(req, timeout=15) as r:
             return _json.loads(r.read())
 
     def fetch_balance(self):
