@@ -31,15 +31,24 @@ def run_bot(cfg):
             from engine import Engine
             Engine(cfg).run()
     except Exception:
-        log.exception("bot crashed")
+        log.exception("crypto bot crashed")
+
+
+def run_commodity(cfg):
+    try:
+        from commodity_engine import CommodityEngine
+        CommodityEngine(cfg).run()
+    except Exception:
+        log.exception("commodity bot crashed")
 
 
 if __name__ == "__main__":
     cfg = load_cfg()
     if cfg["trading"]["mode"] == "live" and not cfg["exchange"]["testnet"]:
         log.warning("*** LIVE MODE + REAL MONEY ***")
-    t = threading.Thread(target=run_bot, args=(cfg,), daemon=True, name="bot")
-    t.start()
+    threading.Thread(target=run_bot, args=(cfg,), daemon=True, name="crypto").start()
+    if cfg.get("commodity", {}).get("enabled"):
+        threading.Thread(target=run_commodity, args=(cfg,), daemon=True, name="commodity").start()
     from dashboard_app import app
     port = int(os.environ.get("PORT", 8050))
     app.run(host="0.0.0.0", port=port)

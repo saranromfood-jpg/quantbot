@@ -122,3 +122,5 @@ portfolio:
   market_filter: true
   market_symbol: BTC/THB
   warmup_bars: 320
+commodity:
+  enabled: true

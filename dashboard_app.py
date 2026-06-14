@@ -25,7 +25,7 @@ PAGE = """<!doctype html><html lang="th"><head><meta charset="utf-8">
  #chartwrap{height:280px} .badge{padding:2px 8px;border-radius:10px;font-size:11px}
  .b-run{background:#1f6f43}.b-kill{background:#8e2c2c}
 </style></head><body>
-<h1>🤖 QuantBot <span id="status" class="badge b-run">-</span> <span class="label" id="updated"></span></h1>
+<h1>🤖 QuantBot <span id="status" class="badge b-run">-</span> <span class="label" id="updated"></span> <a href="/" style="color:#58a6ff;font-size:12px">crypto</a> | <a href="/commodity" style="color:#58a6ff;font-size:12px">commodity</a></h1>
 <div class="grid">
  <div class="card"><div class="label">Equity (THB)</div><div class="val" id="equity">-</div></div>
  <div class="card"><div class="label">PnL รวม</div><div class="val" id="pnl">-</div></div>
@@ -42,7 +42,7 @@ PAGE = """<!doctype html><html lang="th"><head><meta charset="utf-8">
 let chart;
 function fmt(x){return x==null?'-':Number(x).toLocaleString(undefined,{maximumFractionDigits:2})}
 async function refresh(){
- const r = await fetch('/api/state'); if(!r.ok) return;
+ const r = await fetch(window.STATE_URL||'/api/state'); if(!r.ok) return;
  const s = await r.json(); if(!s) return;
  document.getElementById('equity').textContent = fmt(s.equity);
  const pnl = document.getElementById('pnl');
@@ -100,6 +100,20 @@ def state():
     if not os.path.exists(STATE):
         return jsonify(None)
     with open(STATE) as f:
+        return jsonify(json.load(f))
+
+@app.route("/commodity")
+def commodity():
+    page = PAGE.replace("</head>", "<script>window.STATE_URL='/api/state_comm'</script></head>").replace("🤖 QuantBot", "📊 Commodity Bot")
+    return render_template_string(page)
+
+
+@app.route("/api/state_comm")
+def state_comm():
+    fp = os.path.join(ROOT, "state_comm.json")
+    if not os.path.exists(fp):
+        return jsonify(None)
+    with open(fp) as f:
         return jsonify(json.load(f))
 
 
